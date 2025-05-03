@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Каталог скейтбордов</h1>
+    
+    <div class="row">
+        {% for skateboard in skateboards %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if skateboard.image_url %}
+                <img src="{{ skateboard.image_url }}" class="card-img-top" alt="{{ skateboard.name }}">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ skateboard.name }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ skateboard.brand }}</h6>
+                    <p class="card-text">{{ skateboard.description }}</p>
+                    <p class="card-text"><strong>Цена: {{ "%.2f"|format(skateboard.price) }} ₽</strong></p>
+                    <p class="card-text">В наличии: {{ skateboard.stock }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <a href="{{ url_for('add_skateboard') }}" class="btn btn-primary">Добавить скейтборд</a>
+</div>
+{% endblock %} 
