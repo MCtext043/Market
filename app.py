@@ -11,23 +11,30 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///market.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Инициализация базы данных
 db.init_app(app)
 
+def get_user(user_id):
+    return User.query.get(user_id)
+
+app.jinja_env.globals.update(get_user=get_user)
 
 def init_db():
     with app.app_context():
         # Создаем все таблицы
-        db.create_all()
+        db.drop_all()  # Удаляем все существующие таблицы
+        db.create_all()  # Создаем таблицы заново
         # Добавляем примеры скейтбордов только если их нет
         if Skateboard.query.count() == 0:
             sample_skateboards = Skateboard.get_sample_skateboards()
             db.session.add_all(sample_skateboards)
             db.session.commit()
 
+# Инициализируем базу данных при запуске
+init_db()
 
 @app.route('/')
 def index():
@@ -55,7 +62,13 @@ def catalog():
 
 
 @app.route('/add_skateboard', methods=['GET', 'POST'])
+@login_required
 def add_skateboard():
+    user = User.query.get(session['user_id'])
+    if not user.is_seller:
+        flash('Только продавцы могут добавлять товары')
+        return redirect(url_for('catalog'))
+
     if request.method == 'POST':
         name = request.form['name']
         brand = request.form['brand']
@@ -132,7 +145,8 @@ def register():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
-        success, message = register_user(username, email, password)
+        is_seller = 'is_seller' in request.form
+        success, message = register_user(username, email, password, is_seller)
         flash(message)
         if success:
             return redirect(url_for('login'))
@@ -147,11 +161,4 @@ def logout():
 
 
 if __name__ == '__main__':
-    # Инициализируем базу данных при запуске
-    with app.app_context():
-        db.create_all()
-        if Skateboard.query.count() == 0:
-            sample_skateboards = Skateboard.get_sample_skateboards()
-            db.session.add_all(sample_skateboards)
-            db.session.commit()
     app.run(debug=True)

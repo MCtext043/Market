@@ -29,13 +29,13 @@ def admin_required(f):
     return decorated_function
 
 
-def register_user(username, email, password):
+def register_user(username, email, password, is_seller=False):
     if User.query.filter_by(username=username).first():
         return False, 'Пользователь с таким именем уже существует'
     if User.query.filter_by(email=email).first():
         return False, 'Email уже зарегистрирован'
 
-    user = User(username=username, email=email)
+    user = User(username=username, email=email, is_seller=is_seller)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
