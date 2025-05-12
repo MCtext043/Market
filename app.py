@@ -5,7 +5,11 @@ from skateboards import (
     get_all_skateboards, create_skateboard, get_skateboard_by_id,
     update_skateboard, delete_skateboard, search_skateboards,
     get_skateboards_by_brand, get_skateboards_by_price_range,
-    get_skateboards_in_stock, update_stock
+    get_skateboards_in_stock, update_stock, get_all_brands
+)
+from cart import (
+    add_to_cart, remove_from_cart, update_cart_item_quantity,
+    get_cart_items, get_cart_total
 )
 import os
 
@@ -13,28 +17,28 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///market.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Инициализация базы данных
 db.init_app(app)
+
 
 def get_user(user_id):
     return User.query.get(user_id)
 
+
 app.jinja_env.globals.update(get_user=get_user)
+
 
 def init_db():
     with app.app_context():
-        # Создаем все таблицы
-        db.drop_all()  # Удаляем все существующие таблицы
-        db.create_all()  # Создаем таблицы заново
-        # Добавляем примеры скейтбордов только если их нет
+        db.drop_all()
+        db.create_all()
         if Skateboard.query.count() == 0:
             sample_skateboards = Skateboard.get_sample_skateboards()
             db.session.add_all(sample_skateboards)
             db.session.commit()
 
-# Инициализируем базу данных при запуске
+
 init_db()
+
 
 @app.route('/')
 def index():
@@ -44,21 +48,89 @@ def index():
 
 @app.route('/catalog')
 def catalog():
-    query = request.args.get('query', '')
-    brand = request.args.get('brand')
+    filters = {}
     min_price = request.args.get('min_price', type=float)
     max_price = request.args.get('max_price', type=float)
+    brand = request.args.get('brand')
+    in_stock = request.args.get('in_stock') == 'true'
 
-    if query:
-        skateboards = search_skateboards(query)
-    elif brand:
-        skateboards = get_skateboards_by_brand(brand)
-    elif min_price is not None and max_price is not None:
-        skateboards = get_skateboards_by_price_range(min_price, max_price)
-    else:
-        skateboards = get_all_skateboards()
+    if min_price is not None:
+        filters['min_price'] = min_price
+    if max_price is not None:
+        filters['max_price'] = max_price
+    if brand:
+        filters['brand'] = brand
+    if in_stock:
+        filters['in_stock'] = True
+    sort_order = request.args.get('sort_order', 'asc')
+    current_sort = {'by': 'price', 'order': sort_order}
+    brands = get_all_brands()
+    skateboards = get_all_skateboards(filters, 'price', sort_order)
+    return render_template('catalog.html',
+                           skateboards=skateboards,
+                           brands=brands,
+                           current_filters=filters,
+                           current_sort=current_sort)
 
-    return render_template('catalog.html', skateboards=skateboards)
+
+@app.route('/skateboard/<int:skateboard_id>')
+def skateboard_detail(skateboard_id):
+    skateboard = get_skateboard_by_id(skateboard_id)
+    return render_template('skateboard_detail.html', skateboard=skateboard)
+
+
+@app.route('/skateboard/<int:skateboard_id>/add_to_cart', methods=['POST'])
+@login_required
+def add_to_cart_route(skateboard_id):
+    user = User.query.get(session['user_id'])
+    if user.is_seller:
+        flash('Продавцы не могут добавлять товары в корзину')
+        return redirect(url_for('catalog'))
+
+    quantity = int(request.form.get('quantity', 1))
+    success, message = add_to_cart(user.id, skateboard_id, quantity)
+    flash(message)
+    return redirect(url_for('catalog'))
+
+
+@app.route('/cart')
+@login_required
+def cart():
+    user = User.query.get(session['user_id'])
+    if user.is_seller:
+        flash('У продавцов нет корзины')
+        return redirect(url_for('index'))
+
+    cart_items = get_cart_items(user.id)
+    total = get_cart_total(user.id)
+    return render_template('cart.html', cart_items=cart_items, total=total)
+
+
+@app.route('/cart/update/<int:skateboard_id>', methods=['POST'])
+@login_required
+def update_cart(skateboard_id):
+    user = User.query.get(session['user_id'])
+    if user.is_seller:
+        flash('У продавцов нет корзины')
+        return redirect(url_for('index'))
+
+    quantity = int(request.form.get('quantity', 1))
+    success, message = update_cart_item_quantity(user.id, skateboard_id, quantity)
+    flash(message)
+    return redirect(url_for('cart'))
+
+
+@app.route('/cart/remove/<int:skateboard_id>', methods=['POST'])
+@login_required
+def remove_from_cart_route(skateboard_id):
+    user = User.query.get(session['user_id'])
+    if user.is_seller:
+        flash('У продавцов нет корзины')
+        return redirect(url_for('index'))
+
+    success, message = remove_from_cart(user.id, skateboard_id)
+    flash(message)
+    return redirect(url_for('cart'))
 
 
 @app.route('/add_skateboard', methods=['GET', 'POST'])
@@ -90,12 +162,6 @@ def add_skateboard():
         return redirect(url_for('catalog'))
 
     return render_template('add_skateboard.html')
-
-
-@app.route('/skateboard/<int:skateboard_id>')
-def skateboard_detail(skateboard_id):
-    skateboard = get_skateboard_by_id(skateboard_id)
-    return render_template('skateboard_detail.html', skateboard=skateboard)
 
 
 @app.route('/skateboard/<int:skateboard_id>/edit', methods=['GET', 'POST'])

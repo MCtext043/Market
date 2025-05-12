@@ -5,24 +5,108 @@
     <h1 class="mb-4">Каталог скейтбордов</h1>
     
     <div class="row">
-        {% for skateboard in skateboards %}
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                {% if skateboard.image_url %}
-                <img src="{{ skateboard.image_url }}" class="card-img-top" alt="{{ skateboard.name }}">
-                {% endif %}
+        <!-- Фильтры -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Фильтры</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">{{ skateboard.name }}</h5>
-                    <h6 class="card-subtitle mb-2 text-muted">{{ skateboard.brand }}</h6>
-                    <p class="card-text">{{ skateboard.description }}</p>
-                    <p class="card-text"><strong>Цена: {{ "%.2f"|format(skateboard.price) }} ₽</strong></p>
-                    <p class="card-text">В наличии: {{ skateboard.stock }}</p>
+                    <form method="GET" action="{{ url_for('catalog') }}">
+                        <!-- Фильтр по цене -->
+                        <div class="mb-3">
+                            <label class="form-label">Цена</label>
+                            <div class="input-group mb-2">
+                                <input type="number" class="form-control" name="min_price" placeholder="От" 
+                                       value="{{ current_filters.get('min_price', '') }}">
+                                <input type="number" class="form-control" name="max_price" placeholder="До"
+                                       value="{{ current_filters.get('max_price', '') }}">
+                            </div>
+                        </div>
+
+                        <!-- Фильтр по бренду -->
+                        <div class="mb-3">
+                            <label class="form-label">Бренд</label>
+                            <select class="form-select" name="brand">
+                                <option value="">Все бренды</option>
+                                {% for brand in brands %}
+                                <option value="{{ brand[0] }}" {% if current_filters.get('brand') == brand[0] %}selected{% endif %}>
+                                    {{ brand[0] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Фильтр по наличию -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="in_stock" name="in_stock" value="true"
+                                   {% if current_filters.get('in_stock') %}checked{% endif %}>
+                            <label class="form-check-label" for="in_stock">Только в наличии</label>
+                        </div>
+
+                        <!-- Сортировка -->
+                        <div class="mb-3">
+                            <label class="form-label">Сортировка по цене</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="sort_desc" name="sort_order" value="desc"
+                                       {% if current_sort.get('order') == 'desc' %}checked{% endif %}>
+                                <label class="form-check-label" for="sort_desc">По убыванию</label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Применить</button>
+                    </form>
                 </div>
             </div>
         </div>
-        {% endfor %}
+
+        <!-- Список скейтбордов -->
+        <div class="col-md-9">
+            <div class="row">
+                {% for skateboard in skateboards %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if skateboard.image_url %}
+                        <img src="{{ skateboard.image_url }}" class="card-img-top" alt="{{ skateboard.name }}">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ skateboard.name }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ skateboard.brand }}</h6>
+                            <p class="card-text">{{ skateboard.description }}</p>
+                            <p class="card-text"><strong>Цена: {{ "%.2f"|format(skateboard.price) }} ₽</strong></p>
+                            <p class="card-text {% if skateboard.stock > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if skateboard.stock > 0 %}
+                                В наличии: {{ skateboard.stock }}
+                                {% else %}
+                                Нет в наличии
+                                {% endif %}
+                            </p>
+                            {% if session.get('user_id') %}
+                            {% set user = get_user(session.get('user_id')) %}
+                            {% if user and not user.is_seller and skateboard.stock > 0 %}
+                            <form action="{{ url_for('add_to_cart_route', skateboard_id=skateboard.id) }}" method="POST" class="mt-3">
+                                <div class="input-group mb-2">
+                                    <input type="number" name="quantity" value="1" min="1" max="{{ skateboard.stock }}" class="form-control form-control-sm" style="width: 70px;">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-cart-plus me-1"></i>В корзину
+                                    </button>
+                                </div>
+                            </form>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
     
+    {% if session.get('user_id') %}
+    {% set user = get_user(session.get('user_id')) %}
+    {% if user and user.is_seller %}
     <a href="{{ url_for('add_skateboard') }}" class="btn btn-primary">Добавить скейтборд</a>
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %} 

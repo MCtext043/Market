@@ -16,6 +16,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
     is_seller = db.Column(db.Boolean, default=False)
+    cart_items = db.relationship('CartItem', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -32,6 +33,20 @@ class User(db.Model):
             'is_admin': self.is_admin,
             'is_seller': self.is_seller
         }
+
+
+class CartItem(db.Model):
+    __tablename__ = 'cart_items'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    skateboard_id = db.Column(db.Integer, db.ForeignKey('skateboards.id'), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    skateboard = db.relationship('Skateboard', backref='cart_items')
 
 
 class Skateboard(db.Model):

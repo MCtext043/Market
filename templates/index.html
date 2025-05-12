@@ -54,7 +54,7 @@
                         <h5 class="card-title">{{ skateboard.name }}</h5>
                         <h6 class="card-subtitle mb-2 text-muted">{{ skateboard.brand }}</h6>
                         <p class="card-text">{{ skateboard.description }}</p>
-                        <p class="card-text"><strong>Цена: ${{ "%.2f"|format(skateboard.price) }}</strong></p>
+                        <p class="card-text"><strong>Цена: ₽ {{ "%.2f"|format(skateboard.price) }}</strong></p>
                         <p class="card-text">В наличии: {{ skateboard.stock }}</p>
                     </div>
                 </div>

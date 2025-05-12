@@ -1,8 +1,27 @@
 from models import Skateboard, db
+from sqlalchemy import desc, asc
 
 
-def get_all_skateboards():
-    return Skateboard.query.all()
+def get_all_skateboards(filters=None, sort_by=None, sort_order='asc'):
+    query = Skateboard.query
+    if filters:
+        if 'min_price' in filters:
+            query = query.filter(Skateboard.price >= filters['min_price'])
+        if 'max_price' in filters:
+            query = query.filter(Skateboard.price <= filters['max_price'])
+        if 'brand' in filters:
+            query = query.filter(Skateboard.brand == filters['brand'])
+        if 'in_stock' in filters and filters['in_stock']:
+            query = query.filter(Skateboard.stock > 0)
+    if sort_by == 'price':
+        sort_column = Skateboard.price
+    else:
+        sort_column = Skateboard.price
+    if sort_order == 'desc':
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(asc(sort_column))
+    return query.all()
 
 
 def get_skateboard_by_id(skateboard_id):
@@ -67,3 +86,7 @@ def update_stock(skateboard_id, quantity):
     skateboard.stock += quantity
     db.session.commit()
     return skateboard
+
+
+def get_all_brands():
+    return db.session.query(Skateboard.brand).distinct().all()
