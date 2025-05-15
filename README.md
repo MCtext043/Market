@@ -8,3 +8,30 @@
 - Просмотр каталога скейтбордов
 - Оформление заказов
 - Система отзывов о производителях и товарах
+
+## API
+
+### Получение списка товаров
+```
+GET /api/skateboards
+```
+Параметры запроса:
+- `min_price` - минимальная цена
+- `max_price` - максимальная цена
+- `brand` - бренд
+- `in_stock` - только в наличии (true/false)
+- `sort_order` - сортировка (asc/desc)
+
+Пример:
+```
+GET /api/skateboards?min_price=1000&max_price=5000&brand=Element&in_stock=true
+```
+
+### Получение информации о конкретном товаре
+```
+GET /api/skateboards/<id>
+```
+Пример:
+```
+GET /api/skateboards/1
+```

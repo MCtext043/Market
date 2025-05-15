@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from models import db, User, Skateboard
 from auth import login_required, register_user, login_user, logout_user
 from skateboards import (
@@ -224,6 +224,51 @@ def logout():
     message = logout_user()
     flash(message)
     return redirect(url_for('index'))
+
+
+@app.route('/api/skateboards', methods=['GET'])
+def api_get_skateboards():
+    filters = {}
+    min_price = request.args.get('min_price', type=float)
+    max_price = request.args.get('max_price', type=float)
+    brand = request.args.get('brand')
+    in_stock = request.args.get('in_stock') == 'true'
+
+    if min_price is not None:
+        filters['min_price'] = min_price
+    if max_price is not None:
+        filters['max_price'] = max_price
+    if brand:
+        filters['brand'] = brand
+    if in_stock:
+        filters['in_stock'] = True
+
+    sort_order = request.args.get('sort_order', 'asc')
+    skateboards = get_all_skateboards(filters, 'price', sort_order)
+    
+    return jsonify([{
+        'id': skateboard.id,
+        'name': skateboard.name,
+        'brand': skateboard.brand,
+        'price': skateboard.price,
+        'description': skateboard.description,
+        'image_url': skateboard.image_url,
+        'stock': skateboard.stock
+    } for skateboard in skateboards])
+
+
+@app.route('/api/skateboards/<int:skateboard_id>', methods=['GET'])
+def api_get_skateboard(skateboard_id):
+    skateboard = get_skateboard_by_id(skateboard_id)
+    return jsonify({
+        'id': skateboard.id,
+        'name': skateboard.name,
+        'brand': skateboard.brand,
+        'price': skateboard.price,
+        'description': skateboard.description,
+        'image_url': skateboard.image_url,
+        'stock': skateboard.stock
+    })
 
 
 if __name__ == '__main__':
