@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('catalog') }}">Каталог</a></li>
+            <li class="breadcrumb-item active">{{ skateboard.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Изображение товара -->
+        <div class="col-12 col-md-6 mb-4">
+            {% if skateboard.image_url %}
+            <div class="d-flex justify-content-center align-items-center mb-4" style="height: 300px; background-color: #f8f9fa; border-radius: 8px;">
+                <img src="{{ skateboard.image_url }}" class="img-fluid" style="max-height: 100%; max-width: 100%; object-fit: contain;" alt="{{ skateboard.name }}">
+            </div>
+            {% else %}
+            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 300px;">
+                <i class="bi bi-image text-muted" style="font-size: 4rem;"></i>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Информация о товаре -->
+        <div class="col-12 col-md-6">
+            <h1 class="h2 mb-3">{{ skateboard.name }}</h1>
+            <h4 class="text-muted mb-4">{{ skateboard.brand }}</h4>
+            
+            <div class="mb-4">
+                <h3 class="text-primary">{{ "%.2f"|format(skateboard.price) }} ₽</h3>
+                <p class="{% if skateboard.stock > 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if skateboard.stock > 0 %}
+                    В наличии: {{ skateboard.stock }} шт.
+                    {% else %}
+                    Нет в наличии
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="mb-4">
+                <h5>Описание</h5>
+                <p>{{ skateboard.description }}</p>
+            </div>
+
+            {% if session.get('user_id') %}
+            {% set user = get_user(session.get('user_id')) %}
+            {% if user and not user.is_seller and skateboard.stock > 0 %}
+            <form action="{{ url_for('add_to_cart_route', skateboard_id=skateboard.id) }}" method="POST" class="mb-4">
+                <div class="input-group" style="max-width: 200px;">
+                    <input type="number" name="quantity" value="1" min="1" max="{{ skateboard.stock }}" class="form-control">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-cart-plus me-1"></i>В корзину
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+            {% endif %}
+
+            <div class="mt-4">
+                <a href="{{ url_for('catalog') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-1"></i>Назад к каталогу
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media (min-width: 768px) {
+        .col-md-6 .d-flex {
+            height: 700px !important;
+        }
+    }
+    
+    @media (max-width: 767px) {
+        .container {
+            padding: 10px;
+        }
+        .h2 {
+            font-size: 1.5rem;
+        }
+        .text-primary {
+            font-size: 1.5rem;
+        }
+        .btn {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .input-group {
+            max-width: 100% !important;
+        }
+    }
+</style>
+{% endblock %} 
